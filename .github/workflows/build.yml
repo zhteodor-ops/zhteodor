@@ -1,0 +1,42 @@
+name: Build Jerry Mod
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Build
+        id: build
+        run: |
+          chmod +x gradlew
+          set -o pipefail
+          ./gradlew build --no-daemon --stacktrace 2>&1 | tee build.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: jerrymod-jar
+          path: |
+            build/libs/jerrymod-*.jar
+            build.log
+      - name: Publish download (jar + log)
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          FILES="build.log"
+          for f in build/libs/jerrymod-*.jar; do [ -f "$f" ] && FILES="$FILES $f"; done
+          gh release create "jerry-build-${{ github.run_number }}" $FILES \
+            --target "${{ github.sha }}" --prerelease \
+            --title "Jerry Mod build ${{ github.run_number }} (${{ steps.build.outcome }})" \
+            --notes "Forge 1.20.1. Put jerrymod-1.0.0.jar in .minecraft/mods"
