@@ -64,9 +64,17 @@ public class JerryVoicePlugin implements VoicechatPlugin {
         try {
             short[] pcm = voice.decoder.decode(data);
             short[] out = form == JerryForm.DEMON ? voice.demon(pcm) : voice.skinwalker(pcm);
-            event.getPacket().setOpusEncodedData(voice.encoder.encode(out));
+            setOpus(event.getPacket(), voice.encoder.encode(out));
         } catch (Exception e) {
             voice.reset();
+        }
+    }
+
+    /** Newer Simple Voice Chat versions can replace the audio of a packet; older ones just keep the normal voice. */
+    private static void setOpus(Object packet, byte[] data) {
+        try {
+            packet.getClass().getMethod("setOpusEncodedData", byte[].class).invoke(packet, (Object) data);
+        } catch (ReflectiveOperationException | RuntimeException ignored) {
         }
     }
 
